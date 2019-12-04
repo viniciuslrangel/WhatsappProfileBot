@@ -1,0 +1,73 @@
+name: Go
+on:
+  push:
+    branches: 
+      - master
+  pull_request:
+    branches:
+      - master
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest 
+    steps:
+
+    - name: Set up Go 1.13
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v1
+
+    - name: Get dependencies
+      run: |
+        go get -v -t -d ./...
+
+    - name: Build linux
+      run: go build -v .
+
+    - name: Build windows
+      env:
+        GOOS: windows
+      run: go build -v .
+
+    - name: Set release name
+      run: echo ::set-env name=GITHUB_SHA_SHORT::$(echo "Release-`echo $GITHUB_SHA | cut -c 1-6`")
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1.0.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.GITHUB_SHA_SHORT }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Linux binary
+      id: upload-linux-release-asset 
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} 
+        asset_path: ./WhatsappProfile
+        asset_name: WhatsappProfileBot-linux
+        asset_content_type: application/octet-stream
+
+    - name: Upload Windows binary
+      id: upload-windows-release-asset 
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} 
+        asset_path: ./WhatsappProfile.exe
+        asset_name: WhatsappProfileBot-win.exe
+        asset_content_type: application/octet-stream
+
+
